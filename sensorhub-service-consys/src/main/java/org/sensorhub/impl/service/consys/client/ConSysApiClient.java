@@ -92,6 +92,7 @@ public class ConSysApiClient
     static final String OBSERVATIONS_COLLECTION = "observations";
     static final String SUBSYSTEMS_COLLECTION = "subsystems";
     static final String SF_COLLECTION = "fois";
+    static final String BINDING_ERROR = "Error initializing binding";
 
     static final Logger log = LoggerFactory.getLogger(ConSysApiClient.class);
 
@@ -179,7 +180,7 @@ public class ConSysApiClient
         }
         catch (IOException e)
         {
-            throw new IllegalStateException("Error initializing binding", e);
+            throw new IllegalStateException(BINDING_ERROR, e);
         }
     }
     
@@ -222,7 +223,7 @@ public class ConSysApiClient
         }
         catch (IOException e)
         {
-            throw new IllegalStateException("Error initializing binding", e);
+            throw new IllegalStateException(BINDING_ERROR, e);
         }
     }
     
@@ -293,7 +294,7 @@ public class ConSysApiClient
         }
         catch (IOException e)
         {
-            throw new IllegalStateException("Error initializing binding", e);
+            throw new IllegalStateException(BINDING_ERROR, e);
         }
     }
     
@@ -336,7 +337,7 @@ public class ConSysApiClient
         }
         catch (IOException e)
         {
-            throw new IllegalStateException("Error initializing binding", e);
+            throw new IllegalStateException(BINDING_ERROR, e);
         }
     }
     
@@ -406,7 +407,7 @@ public class ConSysApiClient
         }
         catch (IOException e)
         {
-            throw new IllegalStateException("Error initializing binding", e);
+            throw new IllegalStateException(BINDING_ERROR, e);
         }
     }
 
@@ -427,7 +428,7 @@ public class ConSysApiClient
         }
         catch (IOException e)
         {
-            throw new IllegalStateException("Error initializing binding", e);
+            throw new IllegalStateException(BINDING_ERROR, e);
         }
     }
 
@@ -448,7 +449,7 @@ public class ConSysApiClient
         }
         catch (IOException e)
         {
-            throw new IllegalStateException("Error initializing binding", e);
+            throw new IllegalStateException(BINDING_ERROR, e);
         }
     }
 
@@ -490,7 +491,7 @@ public class ConSysApiClient
         }
         catch (IOException e)
         {
-            throw new IllegalStateException("Error initializing binding", e);
+            throw new IllegalStateException(BINDING_ERROR, e);
         }
     }
 
@@ -567,7 +568,7 @@ public class ConSysApiClient
         }
         catch (IOException e)
         {
-            throw new IllegalStateException("Error initializing binding", e);
+            throw new IllegalStateException(BINDING_ERROR, e);
         }
     }
 
@@ -610,7 +611,7 @@ public class ConSysApiClient
         }
         catch (IOException e)
         {
-            throw new IllegalStateException("Error initializing binding", e);
+            throw new IllegalStateException(BINDING_ERROR, e);
         }
     }
 
@@ -636,7 +637,7 @@ public class ConSysApiClient
         }
         catch (IOException e)
         {
-            throw new IllegalStateException("Error initializing binding", e);
+            throw new IllegalStateException(BINDING_ERROR, e);
         }
     }
 
@@ -679,7 +680,7 @@ public class ConSysApiClient
         }
         catch (IOException e)
         {
-            throw new IllegalStateException("Error initializing binding", e);
+            throw new IllegalStateException(BINDING_ERROR, e);
         }
     }
 
@@ -769,7 +770,7 @@ public class ConSysApiClient
         }
         catch (IOException e)
         {
-            throw new IllegalStateException("Error initializing binding", e);
+            throw new IllegalStateException(BINDING_ERROR, e);
         }
     }
 
