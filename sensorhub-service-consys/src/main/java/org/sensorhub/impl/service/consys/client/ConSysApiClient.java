@@ -41,7 +41,6 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import net.opengis.swe.v20.BinaryEncoding;
 import org.sensorhub.api.command.CommandStreamInfo;
@@ -197,11 +196,13 @@ public class ConSysApiClient
             var ctx = new RequestContext(buffer);
             
             var binding = new PropertyBindingJson(ctx, null, null, false) {
+                @Override
                 protected void startJsonCollection(JsonWriter writer) throws IOException
                 {
                     writer.beginArray();
                 }
-                
+
+                @Override
                 protected void endJsonCollection(JsonWriter writer, Collection<ResourceLink> links) throws IOException
                 {
                     writer.endArray();
@@ -256,6 +257,7 @@ public class ConSysApiClient
                 
                 // use modified binding since the response contains a feature collection
                 var binding = new ProcedureBindingGeoJson(ctx, null, null, true) {
+                    @Override
                     public IProcedureWithDesc deserialize(JsonReader reader) throws IOException
                     {
                         skipToCollectionItems(reader);
@@ -309,11 +311,13 @@ public class ConSysApiClient
             var ctx = new RequestContext(buffer);
             
             var binding = new ProcedureBindingSmlJson(ctx, null, false) {
+                @Override
                 protected void startJsonCollection(JsonWriter writer) throws IOException
                 {
                     writer.beginArray();
                 }
-                
+
+                @Override
                 protected void endJsonCollection(JsonWriter writer, Collection<ResourceLink> links) throws IOException
                 {
                     writer.endArray();
@@ -358,7 +362,7 @@ public class ConSysApiClient
         });
     }
 
-    public CompletableFuture<ISystemWithDesc> getSystemByUid(String uid, ResourceFormat format) throws ExecutionException, InterruptedException
+    public CompletableFuture<ISystemWithDesc> getSystemByUid(String uid, ResourceFormat format)
     {
         return sendGetRequest(endpoint.resolve(SYSTEMS_COLLECTION + "?uid=" + uid), format, body -> {
             try
@@ -367,6 +371,7 @@ public class ConSysApiClient
                 
                 // use modified binding since the response contains a feature collection
                 var binding = new SystemBindingGeoJson(ctx, null, null, true) {
+                    @Override
                     public ISystemWithDesc deserialize(JsonReader reader) throws IOException
                     {
                         skipToCollectionItems(reader);
@@ -461,11 +466,13 @@ public class ConSysApiClient
             var ctx = new RequestContext(buffer);
 
             var binding = new SystemBindingSmlJson(ctx, null, false) {
+                @Override
                 protected void startJsonCollection(JsonWriter writer) throws IOException
                 {
                     writer.beginArray();
                 }
 
+                @Override
                 protected void endJsonCollection(JsonWriter writer, Collection<ResourceLink> links) throws IOException
                 {
                     writer.endArray();
@@ -579,11 +586,13 @@ public class ConSysApiClient
             var ctx = new RequestContext(buffer);
             
             var binding = new DataStreamBindingJson(ctx, null, null, false, Collections.emptyMap()) {
+                @Override
                 protected void startJsonCollection(JsonWriter writer) throws IOException
                 {
                     writer.beginArray();
                 }
 
+                @Override
                 protected void endJsonCollection(JsonWriter writer, Collection<ResourceLink> links) throws IOException
                 {
                     writer.endArray();
@@ -648,11 +657,13 @@ public class ConSysApiClient
             var ctx = new RequestContext(buffer);
             
             var binding = new CommandStreamBindingJson(ctx, null, null, false) {
+                @Override
                 protected void startJsonCollection(JsonWriter writer) throws IOException
                 {
                     writer.beginArray();
                 }
 
+                @Override
                 protected void endJsonCollection(JsonWriter writer, Collection<ResourceLink> links) throws IOException
                 {
                     writer.endArray();
