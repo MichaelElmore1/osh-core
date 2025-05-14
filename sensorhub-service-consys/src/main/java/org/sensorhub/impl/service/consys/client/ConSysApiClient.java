@@ -34,14 +34,15 @@ import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Function;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.opengis.swe.v20.BinaryEncoding;
 import org.sensorhub.api.command.CommandStreamInfo;
 import org.sensorhub.api.command.ICommandData;
@@ -346,9 +347,73 @@ public class ConSysApiClient
     /* Systems */
     /*---------*/
 
+    /**
+     * List all top level System resources available from this server endpoint (i.e., subsystems are omitted).
+     *
+     * @param format The format of the response
+     * @return A list of system descriptions
+     */
+    public CompletableFuture<List<ISystemWithDesc>> getSystems(ResourceFormat format)
+    {
+        return getSystems(format, "");
+    }
+
+    /**
+     * List or search all System resources available from this server endpoint.
+     * By default, only top level systems are included (i.e., subsystems are omitted)
+     * unless the <code>parent</code> query parameter is set.
+     *
+     * @param format The format of the response
+     * @param query  Optional query string to filter the results
+     * @return A list of system descriptions
+     */
+    public CompletableFuture<List<ISystemWithDesc>> getSystems(ResourceFormat format, String query)
+    {
+        query = query == null ? "" : query;
+
+        return sendGetRequest(endpoint.resolve(SYSTEMS_COLLECTION + query), format, body ->
+                getCollectionItems(body, itemBody -> {
+                    try
+                    {
+                        var ctx = new RequestContext(itemBody);
+                        var binding = new SystemBindingGeoJson(ctx, null, null, true);
+                        return binding.deserialize();
+                    }
+                    catch (IOException e)
+                    {
+                        throw new CompletionException(e);
+                    }
+                })
+        );
+    }
+
+    /**
+     * Return the latest description of the system valid before or at the current time.
+     *
+     * @param id     Local identifier of the system
+     * @param format The format of the response
+     * @return The system description
+     */
     public CompletableFuture<ISystemWithDesc> getSystemById(String id, ResourceFormat format)
     {
-        return sendGetRequest(endpoint.resolve(SYSTEMS_COLLECTION + "/" + id), format, body -> {
+        return getSystemById(id, format, "");
+    }
+
+    /**
+     * Return the latest description of the system valid before or at the current time, by default.
+     * If the server supports system history, descriptions of the system valid at past (or future)
+     * time can be accessed using the <code>datetime</code> parameter or through the <code>history</code> subcollection.
+     *
+     * @param id     Local identifier of the system
+     * @param format The format of the response
+     * @param query  Optional query string to filter the results
+     * @return The system description
+     */
+    public CompletableFuture<ISystemWithDesc> getSystemById(String id, ResourceFormat format, String query)
+    {
+        query = query == null ? "" : query;
+
+        return sendGetRequest(endpoint.resolve(SYSTEMS_COLLECTION + "/" + id + query), format, body -> {
             try
             {
                 var ctx = new RequestContext(body);
@@ -362,6 +427,13 @@ public class ConSysApiClient
         });
     }
 
+    /**
+     * Return the latest description of the system valid before or at the current time.
+     *
+     * @param uid    The UID of the system
+     * @param format The format of the response
+     * @return The system description
+     */
     public CompletableFuture<ISystemWithDesc> getSystemByUid(String uid, ResourceFormat format)
     {
         return sendGetRequest(endpoint.resolve(SYSTEMS_COLLECTION + "?uid=" + uid), format, body -> {
@@ -388,7 +460,52 @@ public class ConSysApiClient
         });
     }
 
+    /**
+     * List all System resources that are subsystems (i.e., components) of a specific parent system.
+     *
+     * @param systemId The local identifier of the parent system
+     * @param format   The format of the response
+     * @return A list of system descriptions
+     */
+    public CompletableFuture<List<ISystemWithDesc>> getSubsystems(String systemId, ResourceFormat format)
+    {
+        return getSubsystems(systemId, format, "");
+    }
 
+    /**
+     * List or search all System resources that are subsystems (i.e., components) of a specific parent system.
+     *
+     * @param systemId The local identifier of the parent system
+     * @param format   The format of the response
+     * @param query    Optional query string to filter the results
+     * @return A list of system descriptions
+     */
+    public CompletableFuture<List<ISystemWithDesc>> getSubsystems(String systemId, ResourceFormat format, String query)
+    {
+        query = query == null ? "" : query;
+
+        return sendGetRequest(endpoint.resolve(SYSTEMS_COLLECTION + "/" + systemId + "/" + SUBSYSTEMS_COLLECTION + query), format, body ->
+                getCollectionItems(body, itemBody -> {
+                    try
+                    {
+                        var ctx = new RequestContext(itemBody);
+                        var binding = new SystemBindingGeoJson(ctx, null, null, true);
+                        return binding.deserialize();
+                    }
+                    catch (IOException e)
+                    {
+                        throw new CompletionException(e);
+                    }
+                })
+        );
+    }
+
+    /**
+     * Add a new top-level <code>System</code> resource (i.e., the system will have no parent).
+     *
+     * @param system The description of the system to be added
+     * @return The local identifier of the new system
+     */
     public CompletableFuture<String> addSystem(ISystemWithDesc system)
     {
         try
@@ -410,7 +527,17 @@ public class ConSysApiClient
         }
     }
 
-    public CompletableFuture<Integer> updateSystem(String systemID, ISystemWithDesc system)
+    /**
+     * This will completely replace the existing description of the system with the provided content.
+     * If system history is supported and the <code>validTime</code> property starts after the time of the previous description,
+     * the provided description becomes the current one,
+     * and all previous descriptions are made available via the <code>history</code> subcollection.
+     *
+     * @param systemId Local identifier of the system to be updated
+     * @param system   The new description of the system
+     * @return The HTTP status code of the response
+     */
+    public CompletableFuture<Integer> updateSystem(String systemId, ISystemWithDesc system)
     {
         try
         {
@@ -421,7 +548,7 @@ public class ConSysApiClient
             binding.serialize(null, system, false);
 
             return sendPutRequest(
-                    endpoint.resolve(SYSTEMS_COLLECTION + "/" + systemID),
+                    endpoint.resolve(SYSTEMS_COLLECTION + "/" + systemId),
                     ResourceFormat.SML_JSON,
                     buffer.toByteArray());
         }
@@ -431,7 +558,14 @@ public class ConSysApiClient
         }
     }
 
-    public CompletableFuture<String> addSubSystem(String systemID, ISystemWithDesc system)
+    /**
+     * Add a new subsystem to the system with the given ID.
+     *
+     * @param systemId Local identifier of the parent system
+     * @param system   The subsystem to be added
+     * @return The local identifier of the new subsystem
+     */
+    public CompletableFuture<String> addSubSystem(String systemId, ISystemWithDesc system)
     {
         try
         {
@@ -442,7 +576,7 @@ public class ConSysApiClient
             binding.serialize(null, system, false);
 
             return sendPostRequest(
-                    endpoint.resolve(SYSTEMS_COLLECTION + "/" + systemID + "/" + SUBSYSTEMS_COLLECTION),
+                    endpoint.resolve(SYSTEMS_COLLECTION + "/" + systemId + "/" + SUBSYSTEMS_COLLECTION),
                     ResourceFormat.SML_JSON,
                     buffer.toByteArray());
         }
@@ -456,7 +590,6 @@ public class ConSysApiClient
     {
         return addSystems(Arrays.asList(systems));
     }
-
 
     public CompletableFuture<Set<String>> addSystems(Collection<ISystemWithDesc> systems)
     {
@@ -494,6 +627,37 @@ public class ConSysApiClient
         {
             throw new IllegalStateException(BINDING_ERROR, e);
         }
+    }
+
+    /**
+     * Delete the system and remove it from all collections it is associated to.
+     * If the <code>cascade</code> parameter is used,
+     * all associated sub-resources hosted by the same server
+     * (sampling features, datastreams, command streams, observations, and commands) are also deleted.
+     * If system history is supported, all historical descriptions are deleted as well.
+     *
+     * @param systemId Local identifier of a System
+     * @return The HTTP status code of the response
+     */
+    public CompletableFuture<Integer> deleteSystem(String systemId)
+    {
+        return sendDeleteRequest(endpoint.resolve(SYSTEMS_COLLECTION + "/" + systemId));
+    }
+
+    /**
+     * Delete the system and remove it from all collections it is associated to.
+     * If the <code>cascade</code> parameter is used,
+     * all associated sub-resources hosted by the same server
+     * (sampling features, datastreams, command streams, observations, and commands) are also deleted.
+     * If system history is supported, all historical descriptions are deleted as well.
+     *
+     * @param systemId Local identifier of a System
+     * @param cascade  If set to true, dependent resources are also deleted
+     * @return The HTTP status code of the response
+     */
+    public CompletableFuture<Integer> deleteSystem(String systemId, boolean cascade)
+    {
+        return sendDeleteRequest(endpoint.resolve(SYSTEMS_COLLECTION + "/" + systemId + "?cascade=" + cascade));
     }
 
 
@@ -1055,8 +1219,60 @@ public class ConSysApiClient
             }
         });
     }
-    
-    
+
+
+    protected CompletableFuture<Integer> sendDeleteRequest(URI collectionUri)
+    {
+        if (!isHttpClientAvailable)
+            return sendDeleteRequestFallback(collectionUri);
+
+        var req = HttpRequest.newBuilder()
+                .uri(collectionUri)
+                .DELETE()
+                .header(HttpHeaders.ACCEPT, ResourceFormat.JSON.getMimeType())
+                .build();
+
+        return http.sendAsync(req, BodyHandlers.ofString())
+                .thenApply(HttpResponse::statusCode);
+    }
+
+
+    /**
+     * Fallback method for sending requests using HttpURLConnection.
+     * This is used when HttpClient is not available (e.g., on Android).
+     */
+    protected CompletableFuture<Integer> sendDeleteRequestFallback(URI collectionUri)
+    {
+        return CompletableFuture.supplyAsync(() -> {
+            HttpURLConnection connection = null;
+            try
+            {
+                URL url = collectionUri.toURL();
+                connection = (HttpURLConnection) url.openConnection();
+                if (authenticator != null)
+                {
+                    Authenticator.setDefault(authenticator);
+                }
+                connection.setRequestMethod("DELETE");
+                connection.setRequestProperty(HttpHeaders.ACCEPT, ResourceFormat.JSON.getMimeType());
+
+                return connection.getResponseCode();
+            }
+            catch (IOException e)
+            {
+                throw new CompletionException(e);
+            }
+            finally
+            {
+                if (connection != null)
+                {
+                    connection.disconnect();
+                }
+            }
+        });
+    }
+
+
     protected void skipToCollectionItems(JsonReader reader) throws IOException
     {
         // skip to array of collection items
@@ -1070,7 +1286,36 @@ public class ConSysApiClient
                 reader.skipValue();
         }
     }
-    
+
+
+    /**
+     * Get the items from a collection in the body of the response.
+     *
+     * @param body   The input stream representing the entire response body
+     * @param mapper A function to map an input stream representing an individual item to the desired type
+     * @param <T>    The type of the items in the collection
+     * @return A list of items in the collection, mapped to the desired type
+     */
+    protected <T> List<T> getCollectionItems(InputStream body, Function<InputStream, T> mapper)
+    {
+        try
+        {
+            JsonObject bodyJson = JsonParser.parseReader(new InputStreamReader(body)).getAsJsonObject();
+            JsonArray arrayItems = bodyJson.getAsJsonArray("items");
+
+            List<T> collectionItems = new ArrayList<>();
+            for (JsonElement item : arrayItems)
+            {
+                var ctx = new RequestContext(new ByteArrayInputStream(item.toString().getBytes()));
+                collectionItems.add(mapper.apply(ctx.getInputStream()));
+            }
+            return collectionItems;
+        }
+        catch (IOException e)
+        {
+            throw new CompletionException(e);
+        }
+    }
 
 
     /* Builder stuff */
