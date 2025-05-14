@@ -131,7 +131,6 @@ public class ConSysApiClient
             }
             catch (IOException e)
             {
-                e.printStackTrace();
                 throw new CompletionException(e);
             }
         });
@@ -151,7 +150,6 @@ public class ConSysApiClient
                 }
                 catch (IOException e)
                 {
-                    e.printStackTrace();
                     throw new CompletionException(e);
                 }
             });
@@ -243,7 +241,6 @@ public class ConSysApiClient
             }
             catch (IOException e)
             {
-                e.printStackTrace();
                 throw new CompletionException(e);
             }
         });
@@ -270,7 +267,6 @@ public class ConSysApiClient
             }
             catch (IOException e)
             {
-                e.printStackTrace();
                 throw new CompletionException(e);
             }
         });
@@ -357,7 +353,6 @@ public class ConSysApiClient
             }
             catch (IOException e)
             {
-                e.printStackTrace();
                 throw new CompletionException(e);
             }
         });
@@ -383,7 +378,6 @@ public class ConSysApiClient
             }
             catch (IOException e)
             {
-                e.printStackTrace();
                 throw new CompletionException(e);
             }
         });
@@ -511,7 +505,6 @@ public class ConSysApiClient
             }
             catch (IOException e)
             {
-                e.printStackTrace();
                 throw new CompletionException(e);
             }
         });
@@ -545,7 +538,6 @@ public class ConSysApiClient
             }
             catch (IOException e)
             {
-                e.printStackTrace();
                 throw new CompletionException(e);
             }
         });
@@ -696,7 +688,6 @@ public class ConSysApiClient
             }
             catch (IOException e)
             {
-                e.printStackTrace();
                 throw new CompletionException(e);
             }
         });
@@ -731,7 +722,6 @@ public class ConSysApiClient
             }
             catch (IOException e)
             {
-                e.printStackTrace();
                 throw new CompletionException(e);
             }
         });
