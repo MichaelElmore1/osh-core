@@ -665,6 +665,132 @@ public class ConSysApiClient
     /* Datastreams */
     /*-------------*/
 
+    /**
+     * List all datastreams available from this server endpoint.
+     *
+     * @param format      The format of the response
+     * @param fetchSchema If true, the datastream schema is also fetched
+     * @return A list of datastream descriptions
+     */
+    public CompletableFuture<List<IDataStreamInfo>> getDataStreams(ResourceFormat format, boolean fetchSchema)
+    {
+        return getDataStreams(format, fetchSchema, "");
+    }
+
+    /**
+     * List or search all datastreams available from this server endpoint.
+     *
+     * @param format      The format of the response
+     * @param fetchSchema If true, the datastream schema is also fetched
+     * @param query       Optional query string to filter the results
+     * @return A list of datastream descriptions
+     */
+    public CompletableFuture<List<IDataStreamInfo>> getDataStreams(ResourceFormat format, boolean fetchSchema, String query)
+    {
+        query = query == null ? "" : query;
+
+        var cf1 = sendGetRequest(endpoint.resolve(DATASTREAMS_COLLECTION + query), format, body ->
+                getCollectionItems(body, itemBody -> {
+                    try
+                    {
+                        var ctx = new RequestContext(itemBody);
+                        var binding = new DataStreamBindingJson(ctx, null, null, true, Collections.emptyMap());
+                        return binding.deserialize();
+                    }
+                    catch (IOException e)
+                    {
+                        throw new CompletionException(e);
+                    }
+                })
+        );
+
+        if (fetchSchema)
+        {
+            return cf1.thenApply(dsList -> {
+                List<IDataStreamInfo> dsListNew = new ArrayList<>();
+                for (var dsInfo : dsList)
+                {
+                    var schemaInfo = getDatastreamSchema(dsInfo.getID(), ResourceFormat.JSON, ResourceFormat.JSON).join();
+                    schemaInfo.getRecordStructure().setName(dsInfo.getOutputName());
+                    dsInfo = DataStreamInfo.Builder.from(dsInfo)
+                            .withRecordDescription(schemaInfo.getRecordStructure())
+                            .build();
+                    dsListNew.add(dsInfo);
+                }
+                return dsListNew;
+            });
+        } else
+            return cf1;
+    }
+
+    /**
+     * List all datastreams available from the parent system.
+     *
+     * @param systemId    The local identifier of the parent system
+     * @param format      The format of the response
+     * @param fetchSchema If true, the datastream schema is also fetched
+     * @return A list of datastream descriptions
+     */
+    public CompletableFuture<List<IDataStreamInfo>> getDataStreamsOfSystem(String systemId, ResourceFormat format, boolean fetchSchema)
+    {
+        return getDataStreamsOfSystem(systemId, format, fetchSchema, "");
+    }
+
+    /**
+     * List or search all datastreams available from the parent system.
+     *
+     * @param systemId    The local identifier of the parent system
+     * @param format      The format of the response
+     * @param fetchSchema If true, the datastream schema is also fetched
+     * @param query       Optional query string to filter the results
+     * @return A list of datastream descriptions
+     */
+    public CompletableFuture<List<IDataStreamInfo>> getDataStreamsOfSystem(String systemId, ResourceFormat format, boolean fetchSchema, String query)
+    {
+        query = query == null ? "" : query;
+
+        var cf1 = sendGetRequest(endpoint.resolve(SYSTEMS_COLLECTION + "/" + systemId + "/" + DATASTREAMS_COLLECTION + query), format, body ->
+                getCollectionItems(body, itemBody -> {
+                    try
+                    {
+                        var ctx = new RequestContext(itemBody);
+                        var binding = new DataStreamBindingJson(ctx, null, null, true, Collections.emptyMap());
+                        return binding.deserialize();
+                    }
+                    catch (IOException e)
+                    {
+                        throw new CompletionException(e);
+                    }
+                })
+        );
+
+        if (fetchSchema)
+        {
+            return cf1.thenApply(dsList -> {
+                List<IDataStreamInfo> dsListNew = new ArrayList<>();
+                for (var dsInfo : dsList)
+                {
+                    var schemaInfo = getDatastreamSchema(dsInfo.getID(), ResourceFormat.JSON, ResourceFormat.JSON).join();
+                    schemaInfo.getRecordStructure().setName(dsInfo.getOutputName());
+                    dsInfo = DataStreamInfo.Builder.from(dsInfo)
+                            .withRecordDescription(schemaInfo.getRecordStructure())
+                            .build();
+                    dsListNew.add(dsInfo);
+                }
+                return dsListNew;
+            });
+        } else
+            return cf1;
+    }
+
+    /**
+     * Get the datastream description by its local identifier.
+     *
+     * @param id          The local identifier of the datastream
+     * @param format      The format of the response
+     * @param fetchSchema If true, the datastream schema is also fetched
+     * @return The datastream description
+     */
     public CompletableFuture<IDataStreamInfo> getDatastreamById(String id, ResourceFormat format, boolean fetchSchema)
     {
         var cf1 = sendGetRequest(endpoint.resolve(DATASTREAMS_COLLECTION + "/" + id), format, body -> {
@@ -697,7 +823,17 @@ public class ConSysApiClient
             return cf1;
         
     }
-    
+
+    /**
+     * Get the observation schema for a given format.
+     * The type of observation schema returned depends on the observation encoding format
+     * selected using the <code>obsFormat</code> parameter.
+     *
+     * @param id        The local identifier of the datastream
+     * @param obsFormat The encoding format of the observations
+     * @param format    The format of the response
+     * @return The datastream schema
+     */
     public CompletableFuture<IDataStreamInfo> getDatastreamSchema(String id, ResourceFormat obsFormat, ResourceFormat format)
     {
         return sendGetRequest(endpoint.resolve(DATASTREAMS_COLLECTION + "/" + id + "/schema?obsFormat="+obsFormat), format, body -> {
@@ -714,6 +850,13 @@ public class ConSysApiClient
         });
     }
 
+    /**
+     * Add a new datastream to an existing system.
+     *
+     * @param systemId   The local identifier of the parent system
+     * @param datastream The datastream to be added
+     * @return The local identifier of the new datastream
+     */
     public CompletableFuture<String> addDataStream(String systemId, IDataStreamInfo datastream)
     {
         try
@@ -735,12 +878,10 @@ public class ConSysApiClient
         }
     }
 
-
     public CompletableFuture<Set<String>> addDataStreams(String systemId, IDataStreamInfo... datastreams)
     {
         return addDataStreams(systemId, Arrays.asList(datastreams));
     }
-
 
     public CompletableFuture<Set<String>> addDataStreams(String systemId, Collection<IDataStreamInfo> datastreams)
     {
@@ -778,6 +919,58 @@ public class ConSysApiClient
         {
             throw new IllegalStateException(BINDING_ERROR, e);
         }
+    }
+
+    /**
+     * Update the datastream description.
+     *
+     * @param dataStreamId The local identifier of the datastream to be updated
+     * @param dataStream   The new datastream description
+     * @return The HTTP status code of the response
+     */
+    public CompletableFuture<Integer> updateDataStream(String dataStreamId, IDataStreamInfo dataStream)
+    {
+        try
+        {
+            var buffer = new ByteArrayOutputStream();
+            var ctx = new RequestContext(buffer);
+
+            var binding = new DataStreamBindingJson(ctx, null, null, false, Collections.emptyMap());
+            binding.serialize(null, dataStream, false);
+
+            return sendPutRequest(
+                    endpoint.resolve(DATASTREAMS_COLLECTION + "/" + dataStreamId),
+                    ResourceFormat.JSON,
+                    buffer.toByteArray());
+        }
+        catch (IOException e)
+        {
+            throw new IllegalStateException(BINDING_ERROR, e);
+        }
+    }
+
+    /**
+     * This will delete the datastream and remove it from all collections it is associated to.
+     * If the <code>cascade</code> parameter is used, all associated observations are also deleted.
+     *
+     * @param dataStreamId The local identifier of the datastream to be deleted
+     * @return The HTTP status code of the response
+     */
+    public CompletableFuture<Integer> deleteDataStream(String dataStreamId)
+    {
+        return sendDeleteRequest(endpoint.resolve(DATASTREAMS_COLLECTION + "/" + dataStreamId));
+    }
+
+    /**
+     * This will delete the datastream and remove it from all collections it is associated to.
+     * If the <code>cascade</code> parameter is used, all associated observations are also deleted.
+     *
+     * @param dataStreamId The local identifier of the datastream to be deleted
+     * @return The HTTP status code of the response
+     */
+    public CompletableFuture<Integer> deleteDataStream(String dataStreamId, boolean cascade)
+    {
+        return sendDeleteRequest(endpoint.resolve(DATASTREAMS_COLLECTION + "/" + dataStreamId + "?cascade=" + cascade));
     }
 
 

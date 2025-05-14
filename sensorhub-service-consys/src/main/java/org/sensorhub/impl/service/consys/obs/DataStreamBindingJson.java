@@ -102,7 +102,8 @@ public class DataStreamBindingJson extends ResourceBindingJson<DataStreamKey, ID
         
         if (reader.peek() == JsonToken.END_DOCUMENT || !reader.hasNext())
             return null;
-                
+
+        String id = null;
         String name = null;
         String description = null;
         String outputName = null;
@@ -120,8 +121,10 @@ public class DataStreamBindingJson extends ResourceBindingJson<DataStreamKey, ID
             while (reader.hasNext())
             {
                 var prop = reader.nextName();
-                
-                if ("name".equals(prop))
+
+                if ("id".equals(prop))
+                    id = reader.nextString();
+                else if ("name".equals(prop))
                     name = reader.nextString();
                 else if ("description".equals(prop))
                     description = reader.nextString();
@@ -186,6 +189,7 @@ public class DataStreamBindingJson extends ResourceBindingJson<DataStreamKey, ID
             // create datastream info object
             dsInfo = DataStreamInfo.Builder.from(dsInfo)
                 .withSystem(sysRef != null ? sysRef : FeatureId.NULL_FEATURE)
+                .withID(id)
                 .withName(name)
                 .withDescription(description)
                 .withValidTime(validTime)
@@ -203,6 +207,7 @@ public class DataStreamBindingJson extends ResourceBindingJson<DataStreamKey, ID
             
             dsInfo = new DataStreamInfo.Builder()
                 .withSystem(sysRef != null ? sysRef : FeatureId.NULL_FEATURE)
+                .withID(id)
                 .withName(name)
                 .withDescription(description)
                 .withValidTime(validTime)
