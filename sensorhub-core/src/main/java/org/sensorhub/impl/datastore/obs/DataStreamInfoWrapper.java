@@ -42,6 +42,13 @@ public abstract class DataStreamInfoWrapper implements IDataStreamInfo
     {
         this.delegate = Asserts.checkNotNull(dsInfo, IDataStreamInfo.class);
     }
+
+
+    @Override
+    public String getID()
+    {
+        return delegate.getID();
+    }
     
     
     @Override

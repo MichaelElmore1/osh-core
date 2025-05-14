@@ -34,6 +34,10 @@ import net.opengis.swe.v20.DataEncoding;
  */
 public interface IDataStreamInfo extends IResource
 {
+    /**
+     * @return The identifier of the data stream
+     */
+    String getID();
 
     /**
      * @return The identifier of the system that produces this data stream
