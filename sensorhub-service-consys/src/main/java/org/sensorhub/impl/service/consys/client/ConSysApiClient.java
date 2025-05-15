@@ -978,73 +978,132 @@ public class ConSysApiClient
     /* Control Streams */
     /*-----------------*/
 
-    public CompletableFuture<String> addControlStream(String systemId, ICommandStreamInfo cmdstream)
-    {
-        try
-        {
-            var buffer = new ByteArrayOutputStream();
-            var ctx = new RequestContext(buffer);
-            
-            var binding = new CommandStreamBindingJson(ctx, null, null, false);
-            binding.serializeCreate(cmdstream);
 
-            return sendPostRequest(
-                endpoint.resolve(SYSTEMS_COLLECTION + "/" + systemId + "/" + CONTROLS_COLLECTION),
-                ResourceFormat.JSON,
-                buffer.toByteArray());
-        }
-        catch (IOException e)
-        {
-            throw new IllegalStateException(BINDING_ERROR, e);
-        }
+    /**
+     * List all control streams available from this server endpoint.
+     *
+     * @param format      The format of the response
+     * @param fetchSchema If true, the control stream schema is also fetched
+     * @return A list of control stream descriptions
+     */
+    public CompletableFuture<List<ICommandStreamInfo>> getControlStreams(ResourceFormat format, boolean fetchSchema)
+    {
+        return getControlStreams(format, fetchSchema, "");
     }
 
-
-    public CompletableFuture<Set<String>> addControlStreams(String systemId, ICommandStreamInfo... cmdstreams)
+    /**
+     * List or search all control streams available from this server endpoint.
+     *
+     * @param format      The format of the response
+     * @param fetchSchema If true, the control stream schema is also fetched
+     * @param query       Optional query string to filter the results
+     * @return A list of control stream descriptions
+     */
+    public CompletableFuture<List<ICommandStreamInfo>> getControlStreams(ResourceFormat format, boolean fetchSchema, String query)
     {
-        return addControlStreams(systemId, Arrays.asList(cmdstreams));
-    }
+        query = query == null ? "" : query;
 
+        var cf1 = sendGetRequest(endpoint.resolve(CONTROLS_COLLECTION + query), format, body ->
+                getCollectionItems(body, itemBody -> {
+                    try
+                    {
+                        var ctx = new RequestContext(itemBody);
+                        var binding = new CommandStreamBindingJson(ctx, null, null, true);
+                        return binding.deserialize();
+                    }
+                    catch (IOException e)
+                    {
+                        throw new CompletionException(e);
+                    }
+                })
+        );
 
-    public CompletableFuture<Set<String>> addControlStreams(String systemId, Collection<ICommandStreamInfo> cmdstreams)
-    {
-        try
+        if (fetchSchema)
         {
-            var buffer = new ByteArrayOutputStream();
-            var ctx = new RequestContext(buffer);
-            
-            var binding = new CommandStreamBindingJson(ctx, null, null, false) {
-                @Override
-                protected void startJsonCollection(JsonWriter writer) throws IOException
+            return cf1.thenApply(csList -> {
+                List<ICommandStreamInfo> csListNew = new ArrayList<>();
+                for (var csInfo : csList)
                 {
-                    writer.beginArray();
+                    var schemaInfo = getControlStreamSchema(csInfo.getID(), ResourceFormat.JSON, ResourceFormat.JSON).join();
+                    schemaInfo.getRecordStructure().setName(csInfo.getControlInputName());
+                    csInfo = CommandStreamInfo.Builder.from(csInfo)
+                            .withRecordDescription(schemaInfo.getRecordStructure())
+                            .build();
+                    csListNew.add(csInfo);
                 }
-
-                @Override
-                protected void endJsonCollection(JsonWriter writer, Collection<ResourceLink> links) throws IOException
-                {
-                    writer.endArray();
-                    writer.flush();
-                }
-            };
-
-            binding.startCollection();
-            for (var ds: cmdstreams)
-                binding.serializeCreate(ds);
-            binding.endCollection(Collections.emptyList());
-
-            return sendBatchPostRequest(
-                endpoint.resolve(SYSTEMS_COLLECTION + "/" + systemId + "/" + CONTROLS_COLLECTION),
-                ResourceFormat.JSON,
-                buffer.toByteArray());
-        }
-        catch (IOException e)
-        {
-            throw new IllegalStateException(BINDING_ERROR, e);
-        }
+                return csListNew;
+            });
+        } else
+            return cf1;
     }
 
+    /**
+     * List all control streams available from the parent system.
+     *
+     * @param systemId    The local identifier of the parent system
+     * @param format      The format of the response
+     * @param fetchSchema If true, the control stream schema is also fetched
+     * @return A list of control stream descriptions
+     */
+    public CompletableFuture<List<ICommandStreamInfo>> getControlStreamsOfSystem(String systemId, ResourceFormat format, boolean fetchSchema)
+    {
+        return getControlStreamsOfSystem(systemId, format, fetchSchema, "");
+    }
 
+    /**
+     * List or search all control streams available from the parent system.
+     *
+     * @param format      The format of the response
+     * @param fetchSchema If true, the control stream schema is also fetched
+     * @param query       Optional query string to filter the results
+     * @return A list of control stream descriptions
+     */
+    public CompletableFuture<List<ICommandStreamInfo>> getControlStreamsOfSystem(String systemId, ResourceFormat format, boolean fetchSchema, String query)
+    {
+        query = query == null ? "" : query;
+
+        var cf1 = sendGetRequest(endpoint.resolve(SYSTEMS_COLLECTION + "/" + systemId + "/" + CONTROLS_COLLECTION + query), format, body ->
+                getCollectionItems(body, itemBody -> {
+                    try
+                    {
+                        var ctx = new RequestContext(itemBody);
+                        var binding = new CommandStreamBindingJson(ctx, null, null, true);
+                        return binding.deserialize();
+                    }
+                    catch (IOException e)
+                    {
+                        throw new CompletionException(e);
+                    }
+                })
+        );
+
+        if (fetchSchema)
+        {
+            return cf1.thenApply(csList -> {
+                List<ICommandStreamInfo> csListNew = new ArrayList<>();
+                for (var csInfo : csList)
+                {
+                    var schemaInfo = getControlStreamSchema(csInfo.getID(), ResourceFormat.JSON, ResourceFormat.JSON).join();
+                    schemaInfo.getRecordStructure().setName(csInfo.getControlInputName());
+                    csInfo = CommandStreamInfo.Builder.from(csInfo)
+                            .withRecordDescription(schemaInfo.getRecordStructure())
+                            .build();
+                    csListNew.add(csInfo);
+                }
+                return csListNew;
+            });
+        } else
+            return cf1;
+    }
+
+    /**
+     * Get the control stream description by its local identifier.
+     *
+     * @param id          The local identifier of the control stream
+     * @param format      The format of the response
+     * @param fetchSchema If true, the control stream schema is also fetched
+     * @return The control stream description
+     */
     public CompletableFuture<ICommandStreamInfo> getControlStreamById(String id, ResourceFormat format, boolean fetchSchema)
     {
         var cf1 = sendGetRequest(endpoint.resolve(CONTROLS_COLLECTION + "/" + id), format, body -> {
@@ -1072,16 +1131,23 @@ public class ConSysApiClient
 
                 return csInfo;
             });
-        }
-        else
+        } else
             return cf1;
-
     }
 
-
-    public CompletableFuture<ICommandStreamInfo> getControlStreamSchema(String id, ResourceFormat obsFormat, ResourceFormat format)
+    /**
+     * Get the control stream schema for a given format.
+     * The type of control stream schema returned depends on the encoding format
+     * selected using the <code>commandFormat</code> parameter.
+     *
+     * @param id            The local identifier of the control stream
+     * @param commandFormat The encoding format of the observations
+     * @param format        The format of the response
+     * @return The control stream schema
+     */
+    public CompletableFuture<ICommandStreamInfo> getControlStreamSchema(String id, ResourceFormat commandFormat, ResourceFormat format)
     {
-        return sendGetRequest(endpoint.resolve(CONTROLS_COLLECTION + "/" + id + "/schema?obsFormat=" + obsFormat), format, body -> {
+        return sendGetRequest(endpoint.resolve(CONTROLS_COLLECTION + "/" + id + "/schema?cmdFormat=" + commandFormat), format, body -> {
             try
             {
                 var ctx = new RequestContext(body);
@@ -1093,6 +1159,131 @@ public class ConSysApiClient
                 throw new CompletionException(e);
             }
         });
+    }
+
+    /**
+     * Add a new control stream to an existing system.
+     *
+     * @param systemId      The local identifier of the parent system
+     * @param controlStream The control stream to be added
+     * @return The local identifier of the new control stream
+     */
+    public CompletableFuture<String> addControlStream(String systemId, ICommandStreamInfo controlStream)
+    {
+        try
+        {
+            var buffer = new ByteArrayOutputStream();
+            var ctx = new RequestContext(buffer);
+            
+            var binding = new CommandStreamBindingJson(ctx, null, null, false);
+            binding.serializeCreate(controlStream);
+
+            return sendPostRequest(
+                endpoint.resolve(SYSTEMS_COLLECTION + "/" + systemId + "/" + CONTROLS_COLLECTION),
+                ResourceFormat.JSON,
+                buffer.toByteArray());
+        }
+        catch (IOException e)
+        {
+            throw new IllegalStateException(BINDING_ERROR, e);
+        }
+    }
+
+
+    public CompletableFuture<Set<String>> addControlStreams(String systemId, ICommandStreamInfo... controlStreams)
+    {
+        return addControlStreams(systemId, Arrays.asList(controlStreams));
+    }
+
+
+    public CompletableFuture<Set<String>> addControlStreams(String systemId, Collection<ICommandStreamInfo> controlStreams)
+    {
+        try
+        {
+            var buffer = new ByteArrayOutputStream();
+            var ctx = new RequestContext(buffer);
+            
+            var binding = new CommandStreamBindingJson(ctx, null, null, false) {
+                @Override
+                protected void startJsonCollection(JsonWriter writer) throws IOException
+                {
+                    writer.beginArray();
+                }
+
+                @Override
+                protected void endJsonCollection(JsonWriter writer, Collection<ResourceLink> links) throws IOException
+                {
+                    writer.endArray();
+                    writer.flush();
+                }
+            };
+
+            binding.startCollection();
+            for (var cs : controlStreams)
+                binding.serializeCreate(cs);
+            binding.endCollection(Collections.emptyList());
+
+            return sendBatchPostRequest(
+                endpoint.resolve(SYSTEMS_COLLECTION + "/" + systemId + "/" + CONTROLS_COLLECTION),
+                ResourceFormat.JSON,
+                buffer.toByteArray());
+        }
+        catch (IOException e)
+        {
+            throw new IllegalStateException(BINDING_ERROR, e);
+        }
+    }
+
+    /**
+     * Update the control stream description.
+     *
+     * @param controlStreamId The local identifier of the control stream to be updated
+     * @param controlStream   The new control stream description
+     * @return The HTTP status code of the response
+     */
+    public CompletableFuture<Integer> updateControlStream(String controlStreamId, ICommandStreamInfo controlStream)
+    {
+        try
+        {
+            var buffer = new ByteArrayOutputStream();
+            var ctx = new RequestContext(buffer);
+
+            var binding = new CommandStreamBindingJson(ctx, null, null, false);
+            binding.serialize(null, controlStream, false);
+
+            return sendPutRequest(
+                    endpoint.resolve(CONTROLS_COLLECTION + "/" + controlStreamId),
+                    ResourceFormat.JSON,
+                    buffer.toByteArray());
+        }
+        catch (IOException e)
+        {
+            throw new IllegalStateException(BINDING_ERROR, e);
+        }
+    }
+
+    /**
+     * This will delete the control stream and remove it from all collections it is associated to.
+     * If the <code>cascade</code> parameter is used, all associated commands are also deleted.
+     *
+     * @param controlStreamId The local identifier of the control stream to be deleted
+     * @return The HTTP status code of the response
+     */
+    public CompletableFuture<Integer> deleteControlStream(String controlStreamId)
+    {
+        return sendDeleteRequest(endpoint.resolve(CONTROLS_COLLECTION + "/" + controlStreamId));
+    }
+
+    /**
+     * This will delete the control stream and remove it from all collections it is associated to.
+     * If the <code>cascade</code> parameter is used, all associated commands are also deleted.
+     *
+     * @param controlStreamId The local identifier of the control stream to be deleted
+     * @return The HTTP status code of the response
+     */
+    public CompletableFuture<Integer> deleteControlStream(String controlStreamId, boolean cascade)
+    {
+        return sendDeleteRequest(endpoint.resolve(CONTROLS_COLLECTION + "/" + controlStreamId + "?cascade=" + cascade));
     }
 
 

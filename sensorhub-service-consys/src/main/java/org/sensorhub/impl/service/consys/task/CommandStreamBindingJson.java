@@ -77,7 +77,8 @@ public class CommandStreamBindingJson extends ResourceBindingJson<CommandStreamK
         
         if (reader.peek() == JsonToken.END_DOCUMENT || !reader.hasNext())
             return null;
-                
+
+        String id = null;
         String name = null;
         String description = null;
         String inputName = null;
@@ -90,8 +91,10 @@ public class CommandStreamBindingJson extends ResourceBindingJson<CommandStreamK
             while (reader.hasNext())
             {
                 var prop = reader.nextName();
-                
-                if ("name".equals(prop))
+
+                if ("id".equals(prop))
+                    id = reader.nextString();
+                else if ("name".equals(prop))
                     name = reader.nextString();
                 else if ("description".equals(prop))
                     description = reader.nextString();
@@ -147,6 +150,7 @@ public class CommandStreamBindingJson extends ResourceBindingJson<CommandStreamK
             // create CommandStreamInfo object
             csInfo = CommandStreamInfo.Builder.from(csInfo)
                     .withSystem(sysRef != null ? sysRef : FeatureId.NULL_FEATURE)
+                    .withID(id)
                     .withName(name)
                     .withDescription(description)
                     .build();
@@ -159,6 +163,7 @@ public class CommandStreamBindingJson extends ResourceBindingJson<CommandStreamK
 
             csInfo = new CommandStreamInfo.Builder()
                     .withSystem(sysRef != null ? sysRef : FeatureId.NULL_FEATURE)
+                    .withID(id)
                     .withName(name)
                     .withDescription(description)
                     .withRecordDescription(resultStruct)
