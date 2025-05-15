@@ -39,6 +39,13 @@ public abstract class CommandStreamInfoWrapper implements ICommandStreamInfo
     {
         this.delegate = Asserts.checkNotNull(csInfo, ICommandStreamInfo.class);
     }
+
+
+    @Override
+    public String getID()
+    {
+        return delegate.getID();
+    }
     
     
     @Override

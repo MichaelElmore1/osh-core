@@ -32,6 +32,10 @@ import net.opengis.swe.v20.DataEncoding;
  */
 public interface ICommandStreamInfo extends IResource
 {
+    /**
+     * @return The identifier of the command stream
+     */
+    String getID();
     
     /**
      * @return The identifier of the system that exposes this command stream

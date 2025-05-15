@@ -32,6 +32,7 @@ import net.opengis.swe.v20.DataEncoding;
  */
 public class CommandStreamInfo implements ICommandStreamInfo
 {
+    protected String id;
     protected String name;
     protected String description;
     protected FeatureId systemID;
@@ -40,8 +41,15 @@ public class CommandStreamInfo implements ICommandStreamInfo
     protected DataEncoding recordEncoding;
     protected DataComponent resultStruct;
     protected DataEncoding resultEncoding;
-    
-    
+
+
+    @Override
+    public String getID()
+    {
+        return id;
+    }
+
+
     @Override
     public FeatureId getSystemID()
     {
@@ -154,6 +162,7 @@ public class CommandStreamInfo implements ICommandStreamInfo
 
         protected B copyFrom(ICommandStreamInfo base)
         {
+            instance.id = base.getID();
             instance.name = base.getName();
             instance.description = base.getDescription();
             instance.systemID = base.getSystemID();
@@ -164,8 +173,15 @@ public class CommandStreamInfo implements ICommandStreamInfo
             instance.resultEncoding = base.getResultEncoding();
             return (B)this;
         }
-        
-        
+
+
+        public B withID(String id)
+        {
+            instance.id = id;
+            return (B) this;
+        }
+
+
         public B withName(String name)
         {
             instance.name = name;
