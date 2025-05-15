@@ -32,22 +32,26 @@ import net.opengis.swe.v20.DataBlock;
 public interface IObsData
 {
     public static final BigId NO_FOI = BigId.NONE;
-    
+
+    /**
+     * @return The identifier of the observation.
+     */
+    String getID();
     
     /**
      * @return The internal ID of the data stream that the observation is part of.
      */
-    public BigId getDataStreamID();
+    BigId getDataStreamID();
 
 
     /**
      * @return The ID of the feature of interest that was observed.<br/>
      * This can be 0 if no feature of interest was reported.
      */
-    public BigId getFoiID();
+    BigId getFoiID();
 
 
-    public default boolean hasFoi()
+    default boolean hasFoi()
     {
         return getFoiID() != NO_FOI;
     }
@@ -58,7 +62,7 @@ public interface IObsData
      * many automated sensor devices, this is typically the sampling time).<br/>
      * This field cannot be null.
      */
-    public Instant getPhenomenonTime();
+    Instant getPhenomenonTime();
 
 
     /**
@@ -70,13 +74,13 @@ public interface IObsData
      * and simulations outputs (e.g. for a model, this is the run time).<br/>
      * If no result time was explicitly set, this returns the phenomenon time
      */
-    public Instant getResultTime();
+    Instant getResultTime();
 
 
     /**
      * @return Observation parameters map
      */
-    public Map<String, Object> getParameters();
+    Map<String, Object> getParameters();
 
 
     /**
@@ -85,11 +89,11 @@ public interface IObsData
      * observation will never be selected when filtering on geometry.<br/>
      * In a given data store, all geometries must be expressed in the same coordinate reference system.
      */
-    public Geometry getPhenomenonLocation();
+    Geometry getPhenomenonLocation();
 
 
     /**
      * @return Observation result data record
      */
-    public DataBlock getResult();
+    DataBlock getResult();
 }

@@ -40,8 +40,14 @@ public class ObsDelegate implements IObsData
     {
         this.delegate = obs;
     }
-    
-    
+
+
+    public String getID()
+    {
+        return delegate.getID();
+    }
+
+
     public BigId getDataStreamID()
     {
         return delegate.getDataStreamID();

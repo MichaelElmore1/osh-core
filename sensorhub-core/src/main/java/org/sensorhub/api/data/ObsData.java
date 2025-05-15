@@ -37,6 +37,7 @@ import net.opengis.swe.v20.DataBlock;
  */
 public class ObsData implements IObsData
 {
+    protected String id = null;
     protected BigId dataStreamID = BigId.NONE;
     protected BigId foiID = BigId.NONE;
     protected Instant resultTime = null;
@@ -50,7 +51,14 @@ public class ObsData implements IObsData
     protected ObsData()
     {
     }
-    
+
+
+    @Override
+    public String getID()
+    {
+        return id;
+    }
+
 
     @Override
     public BigId getDataStreamID()
@@ -149,6 +157,7 @@ public class ObsData implements IObsData
         
         protected B copyFrom(IObsData base)
         {
+            instance.id = base.getID();
             instance.dataStreamID = base.getDataStreamID();
             instance.foiID = base.getFoiID();
             instance.resultTime = base.getResultTime();
@@ -157,6 +166,12 @@ public class ObsData implements IObsData
             instance.parameters = base.getParameters();
             instance.result = base.getResult();
             return (B)this;
+        }
+
+        public B withID(String id)
+        {
+            instance.id = id;
+            return (B) this;
         }
 
 
