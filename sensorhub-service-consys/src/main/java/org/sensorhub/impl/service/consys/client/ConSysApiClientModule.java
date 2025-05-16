@@ -348,7 +348,7 @@ public class ConSysApiClientModule extends AbstractModule<ConSysApiClientConfig>
                                 .withLatestResult()
                                 .build())
                             .forEach(obs ->
-                                client.pushObs(streamInfo.dataStreamID, streamInfo.dataStream, obs, this.dataBaseView.getObservationStore()));
+                                    client.pushObservation(streamInfo.dataStreamID, streamInfo.dataStream, obs));
 
                         getLogger().info("Starting Connected Systems data push for stream {} with UID {} to Connected Systems endpoint {}",
                                 streamInfo.dataStreamID, streamInfo.sysUID, apiEndpointUrl);
@@ -380,7 +380,7 @@ public class ConSysApiClientModule extends AbstractModule<ConSysApiClientConfig>
     {
         var length = e.getObservations().length;
         for(var obs : e.getObservations())
-            client.pushObs(streamInfo.dataStreamID, streamInfo.dataStream, obs, this.dataBaseView.getObservationStore());
+            client.pushObservation(streamInfo.dataStreamID, streamInfo.dataStream, obs);
     }
 
     protected void handleEvent(final SystemEvent e)

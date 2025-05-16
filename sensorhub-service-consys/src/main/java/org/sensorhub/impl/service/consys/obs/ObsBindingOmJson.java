@@ -94,10 +94,14 @@ public class ObsBindingOmJson extends ResourceBindingJson<BigId, IObsData>
         
         if (reader.peek() == JsonToken.END_DOCUMENT || !reader.hasNext())
             return null;
-        
-        var obs = new ObsData.Builder()
-            .withDataStream(contextData.dsID);
-        
+
+        var obs = new ObsData.Builder();
+        if (contextData != null && contextData.dsID != null)
+            obs.withDataStream(contextData.dsID);
+        else if (ctx.isClientSide())
+            // TODO: Figure out how to get the BigId of the datastream on the client side
+            obs.withDataStream(BigId.NONE);
+
         try
         {
             reader.beginObject();
@@ -105,8 +109,10 @@ public class ObsBindingOmJson extends ResourceBindingJson<BigId, IObsData>
             while (reader.hasNext())
             {
                 var propName = reader.nextName();
-                
-                if ("phenomenonTime".equals(propName))
+
+                if ("id".equals(propName))
+                    obs.withID(reader.nextString());
+                else if ("phenomenonTime".equals(propName))
                     obs.withPhenomenonTime(OffsetDateTime.parse(reader.nextString()).toInstant());
                 else if ("resultTime".equals(propName))
                     obs.withResultTime(OffsetDateTime.parse(reader.nextString()).toInstant());
@@ -186,9 +192,13 @@ public class ObsBindingOmJson extends ResourceBindingJson<BigId, IObsData>
         
         // create or reuse existing result writer and write result data
         writer.name("result");
-        var resultWriter = resultWriters.computeIfAbsent(obs.getDataStreamID(),
-            k -> getSweCommonWriter(k, writer, ctx.getPropertyFilter()) );
-        
+        DataStreamWriter resultWriter;
+        if (obsStore != null)
+            resultWriter = resultWriters.computeIfAbsent(obs.getDataStreamID(),
+                    k -> getSweCommonWriter(k, writer, ctx.getPropertyFilter()));
+        else
+            resultWriter = getSweCommonWriter(contextData.dsInfo, writer, ctx.getPropertyFilter());
+
         // write if JSON is supported, otherwise print warning message
         if (resultWriter instanceof JsonDataWriterGson)
             resultWriter.write(obs.getResult());
@@ -198,8 +208,9 @@ public class ObsBindingOmJson extends ResourceBindingJson<BigId, IObsData>
         writer.endObject();
         writer.flush();
     }
-    
-    
+
+
+    @Override
     protected JsonWriter getJsonWriter(OutputStream os, PropertyFilter propFilter) throws IOException
     {
         var writer = super.getJsonWriter(os, propFilter);

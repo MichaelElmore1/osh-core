@@ -1290,9 +1290,109 @@ public class ConSysApiClient
     /*--------------*/
     /* Observations */
     /*--------------*/
-    // TODO: Be able to push different kinds of observations such as video
-    public CompletableFuture<String> pushObs(String dataStreamId, IDataStreamInfo dataStream, IObsData obs, IObsStore obsStore)
+
+    /**
+     * List all observations available from a datastream.
+     *
+     * @param dataStream The datastream description
+     * @param format     The format of the response
+     * @return A list of observations
+     */
+    public CompletableFuture<List<IObsData>> getObservationsOfDataStream(IDataStreamInfo dataStream, ResourceFormat format)
     {
+        return getObservationsOfDataStream(dataStream, format, null);
+    }
+
+    /**
+     * List or search all observations available from a datastream.
+     *
+     * @param dataStream The datastream description
+     * @param format     The format of the response
+     * @param query      Optional query string to filter the results
+     * @return A list of observations
+     */
+    public CompletableFuture<List<IObsData>> getObservationsOfDataStream(IDataStreamInfo dataStream, ResourceFormat format, String query)
+    {
+        query = query == null ? "" : query;
+
+        return sendGetRequest(endpoint.resolve(DATASTREAMS_COLLECTION + "/" + dataStream.getID() + "/" + OBSERVATIONS_COLLECTION + query), format, body ->
+                getCollectionItems(body, itemBody -> {
+                    try
+                    {
+                        ObsHandler.ObsHandlerContextData contextData = new ObsHandler.ObsHandlerContextData();
+                        contextData.dsInfo = dataStream;
+
+                        var ctx = new RequestContext(itemBody);
+                        ctx.setData(contextData);
+
+                        if (dataStream.getRecordEncoding() instanceof BinaryEncoding)
+                        {
+                            ctx.setFormat(ResourceFormat.SWE_BINARY);
+                            var binding = new ObsBindingSweCommon(ctx, null, true, null);
+                            return binding.deserialize();
+                        } else
+                        {
+                            ctx.setFormat(ResourceFormat.OM_JSON);
+                            var binding = new ObsBindingOmJson(ctx, null, true, null);
+                            return binding.deserialize();
+                        }
+                    }
+                    catch (IOException e)
+                    {
+                        throw new CompletionException(e);
+                    }
+                })
+        );
+    }
+
+    /**
+     * Get the observation by its local identifier.
+     *
+     * @param observationId The local identifier of the observation
+     * @param format        The format of the response
+     * @return The observation
+     */
+    public CompletableFuture<IObsData> getObservationById(String observationId, ResourceFormat format, IDataStreamInfo dataStream)
+    {
+        return sendGetRequest(endpoint.resolve(OBSERVATIONS_COLLECTION + "/" + observationId), format, body -> {
+            try
+            {
+                ObsHandler.ObsHandlerContextData contextData = new ObsHandler.ObsHandlerContextData();
+                contextData.dsInfo = dataStream;
+
+                var ctx = new RequestContext(body);
+                ctx.setData(contextData);
+
+                if (dataStream != null && dataStream.getRecordEncoding() instanceof BinaryEncoding)
+                {
+                    ctx.setFormat(ResourceFormat.SWE_BINARY);
+                    var binding = new ObsBindingSweCommon(ctx, null, true, null);
+                    return binding.deserialize();
+                } else
+                {
+                    ctx.setFormat(ResourceFormat.OM_JSON);
+                    var binding = new ObsBindingOmJson(ctx, null, true, null);
+                    return binding.deserialize();
+                }
+            }
+            catch (IOException e)
+            {
+                throw new CompletionException(e);
+            }
+        });
+    }
+
+    /**
+     * Add a new observation to an existing datastream.
+     *
+     * @param dataStreamId The local identifier of the datastream
+     * @param dataStream   The datastream description
+     * @param obs          The observation to be added
+     * @return The local identifier of the new observation
+     */
+    public CompletableFuture<String> pushObservation(String dataStreamId, IDataStreamInfo dataStream, IObsData obs)
+    {
+        // TODO: Be able to push different kinds of observations such as video
         try
         {
             ObsHandler.ObsHandlerContextData contextData = new ObsHandler.ObsHandlerContextData();
@@ -1300,15 +1400,15 @@ public class ConSysApiClient
 
             var buffer = new ByteArrayOutputStream();
             var ctx = new RequestContext(buffer);
+            ctx.setData(contextData);
 
             if(dataStream != null && dataStream.getRecordEncoding() instanceof BinaryEncoding) {
-                ctx.setData(contextData);
                 ctx.setFormat(ResourceFormat.SWE_BINARY);
-                var binding = new ObsBindingSweCommon(ctx, null, false, obsStore);
+                var binding = new ObsBindingSweCommon(ctx, null, false, null);
                 binding.serialize(null, obs, false);
             } else {
                 ctx.setFormat(ResourceFormat.OM_JSON);
-                var binding = new ObsBindingOmJson(ctx, null, false, obsStore);
+                var binding = new ObsBindingOmJson(ctx, null, false, null);
                 binding.serialize(null, obs, false);
             }
 
