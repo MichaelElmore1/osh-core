@@ -68,9 +68,14 @@ public class CommandBindingJson extends ResourceBindingJson<BigId, ICommandData>
         if (forReading)
         {
             this.paramsReader = getSweCommonParser(contextData.dsInfo, reader);
-            
-            var user = ctx.getSecurityHandler().getCurrentUser();
-            this.userID = user != null ? user.getId() : "api";
+
+            if (ctx.isClientSide())
+                this.userID = "api";
+            else
+            {
+                var user = ctx.getSecurityHandler().getCurrentUser();
+                this.userID = user != null ? user.getId() : "api";
+            }
         }
         else
         {
@@ -98,9 +103,14 @@ public class CommandBindingJson extends ResourceBindingJson<BigId, ICommandData>
             return null;
         
         var cmd = new CommandData.Builder()
-            .withCommandStream(contextData.streamID)
-            .withSender(userID);
-        
+                .withSender(userID);
+
+        if (ctx.isClientSide())
+            // TODO: Figure out how to get the BigId of the command stream on the client side
+            cmd.withCommandStream(BigId.NONE);
+        else
+            cmd.withCommandStream(contextData.streamID);
+
         try
         {
             reader.beginObject();
@@ -108,8 +118,10 @@ public class CommandBindingJson extends ResourceBindingJson<BigId, ICommandData>
             while (reader.hasNext())
             {
                 var propName = reader.nextName();
-                
-                if ("issueTime".equals(propName))
+
+                if ("id".equals(propName))
+                    cmd.withIDString(reader.nextString());
+                else if ("issueTime".equals(propName))
                     cmd.withIssueTime(OffsetDateTime.parse(reader.nextString()).toInstant());
                 //else if ("foi".equals(propName))
                 //    obs.withFoi(id)
@@ -144,8 +156,6 @@ public class CommandBindingJson extends ResourceBindingJson<BigId, ICommandData>
     @Override
     public void serialize(BigId key, ICommandData cmd, boolean showLinks, JsonWriter writer) throws IOException
     {
-        var controlId = idEncoders.getCommandStreamIdEncoder().encodeID(cmd.getCommandStreamID());
-            
         writer.beginObject();
         
         if (key != null)
@@ -153,9 +163,14 @@ public class CommandBindingJson extends ResourceBindingJson<BigId, ICommandData>
             var cmdId = idEncoders.getCommandIdEncoder().encodeID(key);
             writer.name("id").value(cmdId);
         }
-        
-        writer.name("control@id").value(controlId);
-        
+
+        if (!ctx.isClientSide())
+        {
+            var controlId = idEncoders.getCommandStreamIdEncoder().encodeID(cmd.getCommandStreamID());
+            writer.name("control@id").value(controlId);
+
+        }
+
         if (cmd.hasFoi())
         {
             var foiId = idEncoders.getFoiIdEncoder().encodeID(cmd.getFoiID());
@@ -179,8 +194,12 @@ public class CommandBindingJson extends ResourceBindingJson<BigId, ICommandData>
         
         // create or reuse existing params writer and write param data
         writer.name("params");
-        var paramWriter = paramsWriters.computeIfAbsent(cmd.getCommandStreamID(),
-            k -> getSweCommonWriter(k, writer, ctx.getPropertyFilter()) );
+        DataStreamWriter paramWriter;
+        if (cmdStore != null)
+            paramWriter = paramsWriters.computeIfAbsent(cmd.getCommandStreamID(),
+                    k -> getSweCommonWriter(k, writer, ctx.getPropertyFilter()));
+        else
+            paramWriter = getSweCommonWriter(contextData.dsInfo, writer, ctx.getPropertyFilter());
         
         // write if JSON is supported, otherwise print warning message
         if (paramWriter instanceof JsonDataWriterGson)

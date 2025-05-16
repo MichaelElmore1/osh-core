@@ -59,7 +59,6 @@ import org.sensorhub.impl.service.consys.obs.DataStreamSchemaBindingOmJson;
 import org.sensorhub.impl.service.consys.procedure.ProcedureBindingGeoJson;
 import org.sensorhub.impl.service.consys.procedure.ProcedureBindingSmlJson;
 import org.sensorhub.impl.service.consys.property.PropertyBindingJson;
-import org.sensorhub.api.datastore.obs.IObsStore;
 import org.sensorhub.impl.service.consys.obs.ObsBindingOmJson;
 import org.sensorhub.impl.service.consys.obs.ObsBindingSweCommon;
 import org.sensorhub.impl.service.consys.obs.ObsHandler;
@@ -68,6 +67,8 @@ import org.sensorhub.impl.service.consys.resource.ResourceFormat;
 import org.sensorhub.impl.service.consys.resource.ResourceLink;
 import org.sensorhub.impl.service.consys.system.SystemBindingGeoJson;
 import org.sensorhub.impl.service.consys.system.SystemBindingSmlJson;
+import org.sensorhub.impl.service.consys.task.CommandBindingJson;
+import org.sensorhub.impl.service.consys.task.CommandHandler;
 import org.sensorhub.impl.service.consys.task.CommandStreamBindingJson;
 import org.sensorhub.impl.service.consys.task.CommandStreamSchemaBindingJson;
 import org.sensorhub.utils.Lambdas;
@@ -86,11 +87,12 @@ public class ConSysApiClient
     static final String PROPERTIES_COLLECTION = "properties";
     static final String PROCEDURES_COLLECTION = "procedures";
     static final String SYSTEMS_COLLECTION = "systems";
+    static final String SUBSYSTEMS_COLLECTION = "subsystems";
     static final String DEPLOYMENTS_COLLECTION = "deployments";
     static final String DATASTREAMS_COLLECTION = "datastreams";
     static final String CONTROLS_COLLECTION = "controlstreams";
     static final String OBSERVATIONS_COLLECTION = "observations";
-    static final String SUBSYSTEMS_COLLECTION = "subsystems";
+    static final String COMMANDS_COLLECTION = "commands";
     static final String SF_COLLECTION = "fois";
     static final String BINDING_ERROR = "Error initializing binding";
 
@@ -1428,11 +1430,86 @@ public class ConSysApiClient
     /* Commands */
     /*----------*/
 
-    public CompletableFuture<String> sendCommand(String controlId, ICommandData cmd)
+    public CompletableFuture<List<ICommandData>> getCommandsOfControlStream(String controlStreamId, ICommandStreamInfo commandStreamInfo)
     {
-        return null;
+        return getCommandsOfControlStream(controlStreamId, commandStreamInfo, "");
     }
-    
+
+    public CompletableFuture<List<ICommandData>> getCommandsOfControlStream(String controlStreamId, ICommandStreamInfo commandStreamInfo, String query)
+    {
+        query = query == null ? "" : query;
+
+        return sendGetRequest(endpoint.resolve(CONTROLS_COLLECTION + "/" + controlStreamId + "/" + COMMANDS_COLLECTION + query), ResourceFormat.OM_JSON, body ->
+                getCollectionItems(body, itemBody -> {
+                    try
+                    {
+                        CommandHandler.CommandHandlerContextData contextData = new CommandHandler.CommandHandlerContextData();
+                        contextData.dsInfo = commandStreamInfo;
+
+                        var ctx = new RequestContext(itemBody);
+                        ctx.setData(contextData);
+                        ctx.setFormat(ResourceFormat.OM_JSON);
+
+                        var binding = new CommandBindingJson(ctx, null, true, null);
+                        return binding.deserialize();
+
+                    }
+                    catch (IOException e)
+                    {
+                        throw new CompletionException(e);
+                    }
+                })
+        );
+    }
+
+    public CompletableFuture<ICommandData> getCommandById(String controlStreamId, String commandId, ICommandStreamInfo commandStreamInfo)
+    {
+        return sendGetRequest(endpoint.resolve(CONTROLS_COLLECTION + "/" + controlStreamId + "/" + COMMANDS_COLLECTION + "/" + commandId), ResourceFormat.OM_JSON, body -> {
+            try
+            {
+                CommandHandler.CommandHandlerContextData contextData = new CommandHandler.CommandHandlerContextData();
+                contextData.dsInfo = commandStreamInfo;
+
+                var ctx = new RequestContext(body);
+                ctx.setData(contextData);
+                ctx.setFormat(ResourceFormat.OM_JSON);
+
+                var binding = new CommandBindingJson(ctx, null, true, null);
+                return binding.deserialize();
+
+            }
+            catch (IOException e)
+            {
+                throw new CompletionException(e);
+            }
+        });
+    }
+
+    public CompletableFuture<String> sendCommand(String controlStreamId, ICommandStreamInfo commandStreamInfo, ICommandData commandData)
+    {
+        try
+        {
+            CommandHandler.CommandHandlerContextData contextData = new CommandHandler.CommandHandlerContextData();
+            contextData.dsInfo = commandStreamInfo;
+
+            var buffer = new ByteArrayOutputStream();
+            var ctx = new RequestContext(buffer);
+            ctx.setData(contextData);
+            ctx.setFormat(ResourceFormat.JSON);
+
+            var binding = new CommandBindingJson(ctx, null, false, null);
+            binding.serialize(null, commandData, false);
+
+            return sendPostRequest(
+                    endpoint.resolve(CONTROLS_COLLECTION + "/" + controlStreamId + "/" + COMMANDS_COLLECTION),
+                    ctx.getFormat(),
+                    buffer.toByteArray());
+        }
+        catch (IOException e)
+        {
+            throw new IllegalStateException(BINDING_ERROR, e);
+        }
+    }
     
     
     /*----------------*/
@@ -1523,7 +1600,10 @@ public class ConSysApiClient
                                 .firstValue(HttpHeaders.LOCATION)
                                 .orElseThrow(() -> new IllegalStateException("Missing Location header in response"));
                         return location.substring(location.lastIndexOf('/') + 1);
-                    } else
+                    } else if (resp.statusCode() == 200)
+                        // Commands have a status code of 200 but no Location header
+                        return resp.body();
+                    else
                         throw new CompletionException(resp.body(), null);
                 });
     }
@@ -1559,9 +1639,14 @@ public class ConSysApiClient
                         throw new IllegalStateException("Missing Location header in response.");
                     }
                     return location.substring(location.lastIndexOf('/') + 1);
-                } else {
+                } else if (responseCode == 200)
+                    // Commands have a status code of 200 but no Location header
+                    try (InputStream is = connection.getInputStream())
+                    {
+                        return new String(is.readAllBytes());
+                    }
+                else
                     throw new CompletionException(connection.getResponseMessage(), null);
-                }
             } catch (IOException e) {
                 throw new CompletionException(e);
             } finally {
