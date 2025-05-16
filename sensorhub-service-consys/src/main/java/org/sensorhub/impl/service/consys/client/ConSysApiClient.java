@@ -1430,16 +1430,31 @@ public class ConSysApiClient
     /* Commands */
     /*----------*/
 
-    public CompletableFuture<List<ICommandData>> getCommandsOfControlStream(String controlStreamId, ICommandStreamInfo commandStreamInfo)
+    /**
+     * List all commands received in a specific control stream.
+     *
+     * @param commandStreamInfo The command stream description
+     * @param format            The format of the response
+     * @return A list of commands
+     */
+    public CompletableFuture<List<ICommandData>> getCommandsOfControlStream(ICommandStreamInfo commandStreamInfo, ResourceFormat format)
     {
-        return getCommandsOfControlStream(controlStreamId, commandStreamInfo, "");
+        return getCommandsOfControlStream(commandStreamInfo, format, "");
     }
 
-    public CompletableFuture<List<ICommandData>> getCommandsOfControlStream(String controlStreamId, ICommandStreamInfo commandStreamInfo, String query)
+    /**
+     * List or search all commands received in a specific control stream.
+     *
+     * @param commandStreamInfo The command stream description
+     * @param format            The format of the response
+     * @param query             Optional query string to filter the results
+     * @return A list of commands
+     */
+    public CompletableFuture<List<ICommandData>> getCommandsOfControlStream(ICommandStreamInfo commandStreamInfo, ResourceFormat format, String query)
     {
         query = query == null ? "" : query;
 
-        return sendGetRequest(endpoint.resolve(CONTROLS_COLLECTION + "/" + controlStreamId + "/" + COMMANDS_COLLECTION + query), ResourceFormat.OM_JSON, body ->
+        return sendGetRequest(endpoint.resolve(CONTROLS_COLLECTION + "/" + commandStreamInfo.getID() + "/" + COMMANDS_COLLECTION + query), format, body ->
                 getCollectionItems(body, itemBody -> {
                     try
                     {
@@ -1462,9 +1477,16 @@ public class ConSysApiClient
         );
     }
 
-    public CompletableFuture<ICommandData> getCommandById(String controlStreamId, String commandId, ICommandStreamInfo commandStreamInfo)
+    /**
+     * Get the command by its local identifier.
+     *
+     * @param commandId         The local identifier of the command
+     * @param commandStreamInfo The command stream description
+     * @return The command
+     */
+    public CompletableFuture<ICommandData> getCommandById(String commandId, ResourceFormat format, ICommandStreamInfo commandStreamInfo)
     {
-        return sendGetRequest(endpoint.resolve(CONTROLS_COLLECTION + "/" + controlStreamId + "/" + COMMANDS_COLLECTION + "/" + commandId), ResourceFormat.OM_JSON, body -> {
+        return sendGetRequest(endpoint.resolve(CONTROLS_COLLECTION + "/" + commandStreamInfo.getID() + "/" + COMMANDS_COLLECTION + "/" + commandId), format, body -> {
             try
             {
                 CommandHandler.CommandHandlerContextData contextData = new CommandHandler.CommandHandlerContextData();
@@ -1485,7 +1507,14 @@ public class ConSysApiClient
         });
     }
 
-    public CompletableFuture<String> sendCommand(String controlStreamId, ICommandStreamInfo commandStreamInfo, ICommandData commandData)
+    /**
+     * Add a new command to an existing control stream.
+     *
+     * @param commandStreamInfo The command stream description
+     * @param commandData       The command to be added
+     * @return The local identifier of the new command
+     */
+    public CompletableFuture<String> sendCommand(ICommandStreamInfo commandStreamInfo, ICommandData commandData)
     {
         try
         {
@@ -1501,7 +1530,7 @@ public class ConSysApiClient
             binding.serialize(null, commandData, false);
 
             return sendPostRequest(
-                    endpoint.resolve(CONTROLS_COLLECTION + "/" + controlStreamId + "/" + COMMANDS_COLLECTION),
+                    endpoint.resolve(CONTROLS_COLLECTION + "/" + commandStreamInfo.getID() + "/" + COMMANDS_COLLECTION),
                     ctx.getFormat(),
                     buffer.toByteArray());
         }
