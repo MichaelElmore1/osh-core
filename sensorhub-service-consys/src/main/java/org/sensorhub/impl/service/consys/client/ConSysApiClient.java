@@ -712,7 +712,7 @@ public class ConSysApiClient
                 List<IDataStreamInfo> dsListNew = new ArrayList<>();
                 for (var dsInfo : dsList)
                 {
-                    var schemaInfo = getDatastreamSchema(dsInfo.getID(), ResourceFormat.JSON, ResourceFormat.JSON).join();
+                    var schemaInfo = getDataStreamSchema(dsInfo.getID(), ResourceFormat.JSON, ResourceFormat.JSON).join();
                     schemaInfo.getRecordStructure().setName(dsInfo.getOutputName());
                     dsInfo = DataStreamInfo.Builder.from(dsInfo)
                             .withRecordDescription(schemaInfo.getRecordStructure())
@@ -772,7 +772,7 @@ public class ConSysApiClient
                 List<IDataStreamInfo> dsListNew = new ArrayList<>();
                 for (var dsInfo : dsList)
                 {
-                    var schemaInfo = getDatastreamSchema(dsInfo.getID(), ResourceFormat.JSON, ResourceFormat.JSON).join();
+                    var schemaInfo = getDataStreamSchema(dsInfo.getID(), ResourceFormat.JSON, ResourceFormat.JSON).join();
                     schemaInfo.getRecordStructure().setName(dsInfo.getOutputName());
                     dsInfo = DataStreamInfo.Builder.from(dsInfo)
                             .withRecordDescription(schemaInfo.getRecordStructure())
@@ -793,7 +793,7 @@ public class ConSysApiClient
      * @param fetchSchema If true, the datastream schema is also fetched
      * @return The datastream description
      */
-    public CompletableFuture<IDataStreamInfo> getDatastreamById(String id, ResourceFormat format, boolean fetchSchema)
+    public CompletableFuture<IDataStreamInfo> getDataStreamById(String id, ResourceFormat format, boolean fetchSchema)
     {
         var cf1 = sendGetRequest(endpoint.resolve(DATASTREAMS_COLLECTION + "/" + id), format, body -> {
             try
@@ -810,7 +810,7 @@ public class ConSysApiClient
         
         if (fetchSchema)
         {
-            return cf1.thenCombine(getDatastreamSchema(id, ResourceFormat.JSON, ResourceFormat.JSON), (dsInfo, schemaInfo) -> {
+            return cf1.thenCombine(getDataStreamSchema(id, ResourceFormat.JSON, ResourceFormat.JSON), (dsInfo, schemaInfo) -> {
                 
                 schemaInfo.getRecordStructure().setName(dsInfo.getOutputName());
                 
@@ -836,7 +836,7 @@ public class ConSysApiClient
      * @param format    The format of the response
      * @return The datastream schema
      */
-    public CompletableFuture<IDataStreamInfo> getDatastreamSchema(String id, ResourceFormat obsFormat, ResourceFormat format)
+    public CompletableFuture<IDataStreamInfo> getDataStreamSchema(String id, ResourceFormat obsFormat, ResourceFormat format)
     {
         return sendGetRequest(endpoint.resolve(DATASTREAMS_COLLECTION + "/" + id + "/schema?obsFormat="+obsFormat), format, body -> {
             try

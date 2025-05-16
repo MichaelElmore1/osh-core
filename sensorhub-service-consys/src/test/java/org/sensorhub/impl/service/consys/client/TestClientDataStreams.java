@@ -92,8 +92,8 @@ public class TestClientDataStreams extends TestClientBase
         var client = ConSysApiClient
             .newBuilder(apiRootUrl)
             .build();
-        
-        var dsInfo = client.getDatastreamById(dsId, ResourceFormat.JSON, false).get();
+
+        var dsInfo = client.getDataStreamById(dsId, ResourceFormat.JSON, false).get();
         
         assertEquals(recordStruct.getName(), dsInfo.getOutputName());
         assertEquals(systemTests.getSystemUid(1), dsInfo.getSystemID().getUniqueID());
