@@ -37,6 +37,7 @@ public class CommandData implements ICommandData
     public static final String UNKNOWN_SENDER = "%NA%";
     
     protected BigId id;
+    protected String idString;
     protected BigId commandStreamID;
     protected BigId foiID = BigId.NONE;
     protected String senderID;
@@ -70,6 +71,13 @@ public class CommandData implements ICommandData
     public BigId getID()
     {
         return id;
+    }
+
+
+    @Override
+    public String getIDString()
+    {
+        return idString;
     }
     
     
@@ -154,6 +162,7 @@ public class CommandData implements ICommandData
         protected B copyFrom(ICommandData base)
         {
             instance.id = base.getID();
+            instance.idString = base.getIDString();
             instance.commandStreamID = base.getCommandStreamID();
             instance.foiID = base.getFoiID();
             instance.senderID = base.getSenderID();
@@ -167,6 +176,13 @@ public class CommandData implements ICommandData
         {
             instance.id = id;
             return (B)this;
+        }
+
+
+        public B withIDString(String idString)
+        {
+            instance.idString = idString;
+            return (B) this;
         }
 
 

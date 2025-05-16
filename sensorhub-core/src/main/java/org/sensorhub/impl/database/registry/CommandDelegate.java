@@ -46,6 +46,13 @@ public class CommandDelegate implements ICommandData
     {
         return delegate.getID();
     }
+
+    
+    @Override
+    public String getIDString()
+    {
+        return delegate.getIDString();
+    }
     
     
     @Override

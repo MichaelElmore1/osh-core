@@ -35,6 +35,12 @@ public interface ICommandData
      * @return The ID of the command or null if not yet assigned.
      */
     BigId getID();
+
+
+    /**
+     * @return The ID of the command or null if not yet assigned.
+     */
+    String getIDString();
     
     
     /**
