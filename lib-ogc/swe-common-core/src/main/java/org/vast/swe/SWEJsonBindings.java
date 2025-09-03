@@ -495,10 +495,15 @@ public class SWEJsonBindings extends AbstractBindings
             }
             else
             {
-                var type = reader.nextString(); // ignore type and always parse Count
-                if (!"Count".equals(type))
+                var type = reader.nextString();
+                if ("Count".equals(type))
+                    elementCountProp.setValue(readCount(reader));
+                else if ("Link".equals(type))
+                {
+                    readLink(reader, elementCountProp);
+                    elementCountProp.setHref(elementCountProp.getHref());
+                } else
                     throw new IOException("Expected Count component");
-                elementCountProp.setValue(readCount(reader));
             }
         }
 
