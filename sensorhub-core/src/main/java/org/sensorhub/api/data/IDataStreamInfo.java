@@ -16,6 +16,7 @@ package org.sensorhub.api.data;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import org.sensorhub.api.feature.FeatureId;
 import org.vast.util.IResource;
@@ -137,6 +138,12 @@ public interface IDataStreamInfo extends IResource
      * same deployment)
      */
     FeatureId getDeploymentID();
+
+
+    /**
+     * @return The list of available formats.
+     */
+    List<String> getFormats();
     
     
     /**

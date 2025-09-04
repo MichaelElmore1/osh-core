@@ -721,16 +721,31 @@ public class ConSysApiClient
         
         if (fetchSchema)
         {
-            return cf1.thenCombine(getDatastreamSchema(id, ResourceFormat.SWE_JSON, ResourceFormat.JSON), (dsInfo, schemaInfo) -> {
-                
+            try
+            {
+                IDataStreamInfo dsInfo = cf1.get();
+
+                ResourceFormat obsFormat;
+                if (dsInfo.getFormats().contains(ResourceFormat.SWE_JSON.getMimeType()))
+                    obsFormat = ResourceFormat.SWE_JSON;
+                else if (dsInfo.getFormats().contains(ResourceFormat.OM_JSON.getMimeType()))
+                    obsFormat = ResourceFormat.OM_JSON;
+                else
+                    throw new IllegalStateException("No supported observation format found for datastream " + id);
+
+                IDataStreamInfo schemaInfo = getDatastreamSchema(id, obsFormat, ResourceFormat.JSON).get();
+
                 schemaInfo.getRecordStructure().setName(dsInfo.getOutputName());
-                
                 dsInfo = DataStreamInfo.Builder.from(dsInfo)
-                    .withRecordDescription(schemaInfo.getRecordStructure())
-                    .build();
-                
-                return dsInfo;
-            });
+                        .withRecordDescription(schemaInfo.getRecordStructure())
+                        .build();
+
+                return CompletableFuture.completedFuture(dsInfo);
+            }
+            catch (InterruptedException | ExecutionException e)
+            {
+                throw new CompletionException(e);
+            }
         }
         else
             return cf1;

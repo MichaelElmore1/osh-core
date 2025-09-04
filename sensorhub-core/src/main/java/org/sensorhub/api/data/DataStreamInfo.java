@@ -17,6 +17,7 @@ package org.sensorhub.api.data;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import org.sensorhub.api.feature.FeatureId;
 import org.vast.util.Asserts;
@@ -55,6 +56,7 @@ public class DataStreamInfo implements IDataStreamInfo
     protected Duration resultTimeInterval;
     protected DataComponent recordStruct;
     protected DataEncoding recordEncoding;
+    protected List<String> formats = Collections.emptyList();
     
     
     @Override
@@ -176,6 +178,13 @@ public class DataStreamInfo implements IDataStreamInfo
     }
 
 
+    @Override
+    public List<String> getFormats()
+    {
+        return formats;
+    }
+
+
     /*
      * Builder
      */
@@ -216,6 +225,7 @@ public class DataStreamInfo implements IDataStreamInfo
             instance.deploymentID = base.getDeploymentID();
             instance.featureOfInterestID = base.getFeatureOfInterestID();
             instance.samplingFeatureID = base.getSamplingFeatureID();
+            instance.formats = base.getFormats();
             return (B)this;
         }
         
@@ -304,6 +314,13 @@ public class DataStreamInfo implements IDataStreamInfo
         }
 
 
+        public B withFormats(List<String> formats)
+        {
+            instance.formats = formats;
+            return (B) this;
+        }
+
+
         @Override
         public T build()
         {
@@ -312,6 +329,7 @@ public class DataStreamInfo implements IDataStreamInfo
             Asserts.checkNotNull(instance.recordStruct, "recordStruct");
             Asserts.checkNotNullOrEmpty(instance.getOutputName(), "outputName");
             Asserts.checkNotNull(instance.recordEncoding, "recordEncoding");
+            Asserts.checkNotNull(instance.formats, "formats");
             return super.build();
         }
     }

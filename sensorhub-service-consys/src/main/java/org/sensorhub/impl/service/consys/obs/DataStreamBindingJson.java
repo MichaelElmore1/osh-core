@@ -17,6 +17,7 @@ package org.sensorhub.impl.service.consys.obs;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import org.sensorhub.api.common.IdEncoders;
 import org.sensorhub.api.data.DataStreamInfo;
@@ -113,7 +114,8 @@ public class DataStreamBindingJson extends ResourceBindingJson<DataStreamKey, ID
         FeatureId foiRef = null;
         FeatureId sfRef = null;
         IDataStreamInfo dsInfo = null;
-        
+        List<String> formats = new ArrayList<>();
+
         try
         {
             reader.beginObject();
@@ -139,6 +141,13 @@ public class DataStreamBindingJson extends ResourceBindingJson<DataStreamKey, ID
                     foiRef = readFeatureRef(reader);
                 else if ("samplingFeature@link".equals(prop))
                     sfRef = readFeatureRef(reader);
+                else if ("formats".equals(prop))
+                {
+                    reader.beginArray();
+                    while (reader.hasNext())
+                        formats.add(reader.nextString());
+                    reader.endArray();
+                }
                 else if ("schema".equals(prop))
                 {
                     reader.beginObject();
@@ -193,6 +202,7 @@ public class DataStreamBindingJson extends ResourceBindingJson<DataStreamKey, ID
                 .withProcedure(procRef)
                 .withFeatureOfInterest(foiRef)
                 .withSamplingFeature(sfRef)
+                .withFormats(formats)
                 .build();
         }
         else
@@ -212,6 +222,7 @@ public class DataStreamBindingJson extends ResourceBindingJson<DataStreamKey, ID
                 .withSamplingFeature(sfRef)
                 .withRecordDescription(resultStruct)
                 .withRecordEncoding(new TextEncodingImpl())
+                .withFormats(formats)
                 .build();
         }
         

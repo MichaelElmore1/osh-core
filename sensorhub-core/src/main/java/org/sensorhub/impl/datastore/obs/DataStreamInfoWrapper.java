@@ -16,6 +16,7 @@ package org.sensorhub.impl.datastore.obs;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import org.sensorhub.api.data.IDataStreamInfo;
 import org.sensorhub.api.feature.FeatureId;
@@ -154,5 +155,11 @@ public abstract class DataStreamInfoWrapper implements IDataStreamInfo
     public FeatureId getDeploymentID()
     {
         return delegate.getDeploymentID();
+    }
+
+
+    public List<String> getFormats()
+    {
+        return delegate.getFormats();
     }
 }
